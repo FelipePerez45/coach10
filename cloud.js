@@ -352,25 +352,6 @@ const CLOUD = (() => {
     workspaceListeners.forEach(cb => { try { cb(workspaceData); } catch (e) { console.error(e); } });
   }
 
-  return {
-    init, ready,
-    signIn, signOut,
-    currentUser:     () => user,
-    currentWorkspace:() => workspaceData,
-    workspaceId:     () => workspaceId,
-    isAuthenticated: () => !!user,
-    status:          () => status,
-    onStatus:        (cb) => { statusListeners.push(cb); cb(status); },
-    onWorkspace:     (cb) => { workspaceListeners.push(cb); cb(workspaceData); },
-    markDirty,
-    syncNow,
-    invite, uninvite,
-    isAdmin,
-    adminEmail: () => ADMIN_EMAIL,
-    explainError: explainAuthError,
-    diagnose,
-  };
-
   async function diagnose() {
     const r = {
       firebase_initialized:  !!app,
@@ -396,6 +377,25 @@ const CLOUD = (() => {
     }
     return r;
   }
+
+  return {
+    init, ready,
+    signIn, signOut,
+    currentUser:     () => user,
+    currentWorkspace:() => workspaceData,
+    workspaceId:     () => workspaceId,
+    isAuthenticated: () => !!user,
+    status:          () => status,
+    onStatus:        (cb) => { statusListeners.push(cb); cb(status); },
+    onWorkspace:     (cb) => { workspaceListeners.push(cb); cb(workspaceData); },
+    markDirty,
+    syncNow,
+    invite, uninvite,
+    isAdmin,
+    adminEmail: () => ADMIN_EMAIL,
+    explainError: explainAuthError,
+    diagnose,
+  };
 })();
 
 window.CLOUD = CLOUD;
