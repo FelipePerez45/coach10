@@ -2191,6 +2191,39 @@ window.refreshCurrentView = () => {
   else if (STATE.tab === 'compra')  renderCompra();
 };
 
+function updateBrandSub() {
+  const sub = $('#brand-sub');
+  if (!sub) return;
+  const u = CLOUD.currentUser();
+  if (!u) { sub.textContent = 'Nutrición · Local'; return; }
+  sub.innerHTML = 'Nutrición · ' + u.email +
+    (CLOUD.isAdmin() ? ' <span class="badge-admin">ADMIN</span>' : '');
+}
+
+function updateAuthBanner() {
+  let banner = $('#auth-banner');
+  const u = CLOUD.currentUser();
+  // Si está logueado pero sin workspace asignado, está en estado "no autorizado"
+  const noAuth = u && !CLOUD.workspaceId();
+  if (!banner) {
+    if (!noAuth) return;
+    banner = document.createElement('div');
+    banner.id = 'auth-banner';
+    banner.className = 'auth-banner';
+    $('#app-main').insertBefore(banner, $('#app-main').firstChild);
+  }
+  if (!noAuth) { banner.remove(); return; }
+  banner.innerHTML = `
+    <div>
+      <strong>⚠️ Sin acceso</strong><br>
+      Tu email <strong>${u.email}</strong> no está en la lista de personas autorizadas.
+      Pídele al administrador (<strong>${CLOUD.adminEmail()}</strong>) que te añada.
+    </div>
+    <button class="text-btn" id="banner-signout">Cerrar sesión</button>
+  `;
+  $('#banner-signout').onclick = async () => { await CLOUD.signOut(); };
+}
+
 function setupCloudUI() {
   const dot   = $('#cloud-dot');
   const label = $('#cloud-label');
@@ -2213,13 +2246,12 @@ function setupCloudUI() {
     if (s === 'error' && detail) btn.title = detail;
   });
 
-  CLOUD.onWorkspace(ws => {
-    const sub = $('#brand-sub');
-    if (!sub) return;
-    if (ws) sub.textContent = 'Nutrición · ' + (ws.name || 'workspace');
-    else sub.textContent = 'Nutrición · Local';
+  CLOUD.onWorkspace(_ws => {
+    updateBrandSub();
+    updateAuthBanner();
     renderCloudMenuSection();
   });
+  CLOUD.onStatus(() => updateBrandSub());
 
   btn.onclick = async () => {
     if (!CLOUD.isAuthenticated()) {
@@ -2246,13 +2278,18 @@ function renderCloudMenuSection() {
       catch (e) { toast(CLOUD.explainError(e), 'error'); }
     };
   } else {
+    const adminBadge = CLOUD.isAdmin() ? ' · 👑 administrador' : '';
     cont.innerHTML = `
-      <div class="hint" style="margin-bottom:10px;">Sesión iniciada como <strong>${u.email}</strong></div>
-      <button class="btn block" id="btn-menu-share">👥 Compartir workspace</button>
+      <div class="hint" style="margin-bottom:10px;">
+        Sesión: <strong>${u.email}</strong>${adminBadge}
+      </div>
+      ${CLOUD.isAdmin() ? '<button class="btn block" id="btn-menu-share">👥 Gestionar accesos</button>' : ''}
       <button class="btn block" id="btn-menu-sync">🔄 Sincronizar ahora</button>
       <button class="btn block ghost" id="btn-menu-signout">Cerrar sesión</button>
     `;
-    $('#btn-menu-share').onclick = () => { closeMenu(); openShare(); };
+    if (CLOUD.isAdmin()) {
+      $('#btn-menu-share').onclick = () => { closeMenu(); openShare(); };
+    }
     $('#btn-menu-sync').onclick  = async () => {
       try { await CLOUD.syncNow(); toast('Sincronizado ✓'); }
       catch (e) { toast('Error al sincronizar', 'error'); }
@@ -2273,14 +2310,18 @@ function renderShareMembers() {
   const cont = $('#share-members');
   if (!ws) { cont.innerHTML = '<p class="hint">Sin workspace activo.</p>'; return; }
   const emails = ws.member_emails || [];
-  cont.innerHTML = emails.map(e => `
-    <div class="share-member">
-      <span>${e}${e === ws.owner_email ? '<span class="role">propietario</span>' : ''}</span>
-      ${e !== ws.owner_email ? `<button data-rm-email="${e}" aria-label="Quitar">✕</button>` : ''}
-    </div>
-  `).join('') || '<p class="hint">Sólo tú.</p>';
+  const adminEmail = CLOUD.adminEmail().toLowerCase();
+  cont.innerHTML = emails.map(e => {
+    const isAdmin = e.toLowerCase() === adminEmail;
+    return `
+      <div class="share-member">
+        <span>${e}${isAdmin ? '<span class="role">administrador</span>' : ''}</span>
+        ${!isAdmin ? `<button data-rm-email="${e}" aria-label="Quitar">✕</button>` : ''}
+      </div>
+    `;
+  }).join('') || '<p class="hint">Sólo tú.</p>';
   cont.querySelectorAll('[data-rm-email]').forEach(b => b.onclick = async () => {
-    if (!confirm(`¿Quitar a ${b.dataset.rmEmail} del workspace?`)) return;
+    if (!confirm(`¿Quitar a ${b.dataset.rmEmail} del acceso?`)) return;
     try { await CLOUD.uninvite(b.dataset.rmEmail); toast('Eliminado'); renderShareMembers(); }
     catch (e) { toast(e.message || 'Error', 'error'); }
   });

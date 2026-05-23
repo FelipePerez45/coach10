@@ -1326,6 +1326,44 @@ textarea { resize: vertical; min-height: 60px; }
 }
 .req { color: var(--warn); font-weight: 700; font-size: 11px; margin-left: 4px; }
 
+/* ===== Auth banner (no autorizado) ===== */
+.auth-banner {
+  background: rgba(255, 59, 48, .12);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.auth-banner strong { color: var(--danger); }
+
+/* ===== Admin badge ===== */
+.badge-admin {
+  display: inline-block;
+  background: var(--accent);
+  color: #001018;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  vertical-align: middle;
+  margin-left: 4px;
+}
+
+/* ===== Brand sub ===== */
+.brand-sub {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+
 /* ===== Cloud status (header) ===== */
 .cloud-status { display: flex; align-items: center; }
 .cloud-btn {

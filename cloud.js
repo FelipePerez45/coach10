@@ -10,6 +10,9 @@ const FIREBASE_CONFIG = {
   appId: "1:326819575376:web:699beeb57bf88ff29d8355",
 };
 
+// Administrador principal: este email es el único que puede gestionar accesos.
+const ADMIN_EMAIL = 'racarfe3@gmail.com';
+
 const SYNC_DEBOUNCE_MS = 3000;
 
 const INLINE_BLOB_LIMIT_BYTES = 700 * 1024;  // umbral seguro para caber en doc Firestore (1 MiB)
@@ -157,48 +160,78 @@ const CLOUD = (() => {
     notifyWorkspace();
   }
 
+  function isAdmin() {
+    return !!(user && user.email && user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase());
+  }
+
   async function onSignedIn() {
     setStatus('syncing');
-    // 1) Busca workspace propio
-    const owned = await fs.collection('workspaces')
-      .where('owner_uid', '==', user.uid).limit(1).get();
+    let wsSnap;
 
-    if (owned.empty) {
-      // Crea uno nuevo desde el contenido local
-      const ref = await fs.collection('workspaces').add({
-        name:         `Workspace de ${user.displayName || user.email}`,
-        owner_uid:    user.uid,
-        owner_email:  user.email,
-        member_emails:[user.email],
-        snapshot_id:   null,
-        snapshot_inline: null,
-        created_at:    firebase.firestore.FieldValue.serverTimestamp(),
-        updated_at:    firebase.firestore.FieldValue.serverTimestamp(),
-      });
-      workspaceId = ref.id;
-      subscribeToWorkspace();
-      // Sube el contenido local actual como primer snapshot
-      dirty = true;
-      await pushSnapshot();
+    if (isAdmin()) {
+      // Admin: localizar su workspace por owner_email
+      wsSnap = await fs.collection('workspaces')
+        .where('owner_email', '==', ADMIN_EMAIL).limit(1).get();
     } else {
-      const docSnap = owned.docs[0];
-      workspaceId = docSnap.id;
+      // No-admin: buscar workspace donde su email esté en member_emails
+      try {
+        wsSnap = await fs.collection('workspaces')
+          .where('member_emails', 'array-contains', user.email).limit(1).get();
+      } catch (e) {
+        console.error('query workspaces failed', e);
+        wsSnap = { empty: true, docs: [] };
+      }
+    }
+
+    if (wsSnap.empty) {
+      if (isAdmin()) {
+        // Primera vez del admin: crear workspace compartido
+        const ref = await fs.collection('workspaces').add({
+          name:           'Coach10 (compartido)',
+          owner_uid:      user.uid,
+          owner_email:    ADMIN_EMAIL.toLowerCase(),
+          member_emails:  [ADMIN_EMAIL.toLowerCase()],
+          snapshot_id:    null,
+          snapshot_inline:null,
+          created_at:     firebase.firestore.FieldValue.serverTimestamp(),
+          updated_at:     firebase.firestore.FieldValue.serverTimestamp(),
+        });
+        workspaceId = ref.id;
+        subscribeToWorkspace();
+        dirty = true;
+        await pushSnapshot();
+      } else {
+        // No autorizado
+        setStatus('error',
+          `No autorizado. Pídele al administrador (${ADMIN_EMAIL}) que añada tu email (${user.email}).`);
+        workspaceId = null;
+        workspaceData = null;
+        notifyWorkspace();
+        return;
+      }
+    } else {
+      const docSnap = wsSnap.docs[0];
+      workspaceId   = docSnap.id;
       workspaceData = docSnap.data();
       subscribeToWorkspace();
-      // Decidir push vs pull
       const localHasData = countLocalCombos() > 0;
       const cloudHasData = !!workspaceData.snapshot_inline;
       if (cloudHasData && !localHasData) {
         await pullSnapshot();
       } else if (cloudHasData && localHasData) {
-        const useCloud = confirm(
-          `Tienes datos en este dispositivo y también en la nube.\n\n` +
-          `• Aceptar → Sustituir local por los de la nube\n` +
-          `• Cancelar → Subir los datos locales y sobreescribir la nube`
-        );
-        if (useCloud) await pullSnapshot();
-        else { dirty = true; await pushSnapshot(); }
-      } else if (!cloudHasData && localHasData) {
+        if (isAdmin()) {
+          const useCloud = confirm(
+            `Tienes datos en este dispositivo y también en la nube.\n\n` +
+            `• Aceptar → Sustituir local por los de la nube\n` +
+            `• Cancelar → Subir los datos locales y sobreescribir la nube`
+          );
+          if (useCloud) await pullSnapshot();
+          else { dirty = true; await pushSnapshot(); }
+        } else {
+          // No admin: la nube manda siempre
+          await pullSnapshot();
+        }
+      } else if (!cloudHasData && localHasData && isAdmin()) {
         dirty = true;
         await pushSnapshot();
       } else {
@@ -294,6 +327,7 @@ const CLOUD = (() => {
   // ---- Compartir workspace ----------------------------------------------
 
   async function invite(email) {
+    if (!isAdmin()) throw new Error(`Sólo el administrador (${ADMIN_EMAIL}) puede gestionar accesos`);
     if (!workspaceId) throw new Error('No workspace activo');
     const norm = email.toLowerCase().trim();
     if (!norm) throw new Error('Email vacío');
@@ -305,8 +339,9 @@ const CLOUD = (() => {
   }
 
   async function uninvite(email) {
+    if (!isAdmin()) throw new Error(`Sólo el administrador (${ADMIN_EMAIL}) puede gestionar accesos`);
     if (!workspaceId) throw new Error('No workspace activo');
-    if (email === workspaceData.owner_email) throw new Error('No puedes quitar al propietario');
+    if (email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) throw new Error('No puedes quitar al administrador');
     await fs.collection('workspaces').doc(workspaceId).update({
       member_emails: firebase.firestore.FieldValue.arrayRemove(email.toLowerCase().trim()),
       updated_at:    firebase.firestore.FieldValue.serverTimestamp(),
@@ -330,6 +365,8 @@ const CLOUD = (() => {
     markDirty,
     syncNow,
     invite, uninvite,
+    isAdmin,
+    adminEmail: () => ADMIN_EMAIL,
     explainError: explainAuthError,
   };
 })();
