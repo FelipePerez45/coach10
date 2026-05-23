@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0a0a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Nutrición · Coach10</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="app-header">
+  <div class="brand">
+    <span class="brand-mark">EL CUERPO<span class="brand-10">10</span></span>
+    <span class="brand-sub">Nutrición · Felipe Alejandro</span>
+  </div>
+  <button id="btn-menu" class="icon-btn" aria-label="Más opciones">⋯</button>
+</header>
+
+<main id="app-main">
+
+  <!-- ============= TAB: TABLA ============= -->
+  <section class="tab-panel" data-tab="tabla">
+    <div class="search-wrap">
+      <input id="search-input" type="search" placeholder="Buscar: pescado, pollo, hidratos, rápido…" autocomplete="off">
+      <button id="search-clear" class="icon-btn" aria-label="Limpiar">✕</button>
+    </div>
+
+    <div class="chips-row" id="chips-grupo"></div>
+    <div class="chips-row" id="chips-comida"></div>
+
+    <div class="results-info">
+      <span id="results-count"></span>
+      <button id="btn-info" class="text-btn">Recomendaciones</button>
+    </div>
+
+    <div id="food-list" class="food-list"></div>
+
+    <details class="info-block">
+      <summary>Equivalencias peso seco / cocido</summary>
+      <div id="info-equivalencias"></div>
+    </details>
+
+    <details class="info-block">
+      <summary>Legumbres (alternativas)</summary>
+      <div id="info-legumbres"></div>
+    </details>
+
+    <details class="info-block">
+      <summary>Medidas orientativas de fruta</summary>
+      <div id="info-frutas"></div>
+    </details>
+
+    <details class="info-block">
+      <summary>Frecuencias semanales recomendadas</summary>
+      <div id="info-frecuencias"></div>
+    </details>
+
+    <details class="info-block">
+      <summary>Recomendaciones generales</summary>
+      <div id="info-recomendaciones"></div>
+    </details>
+
+    <details class="info-block">
+      <summary>Consejos nutricionales (Anexo 1)</summary>
+      <div id="info-consejos"></div>
+    </details>
+
+    <details class="info-block">
+      <summary>Preguntas frecuentes (Anexo 3)</summary>
+      <div id="info-faqs"></div>
+    </details>
+  </section>
+
+  <!-- ============= TAB: COMBOS (Combinar + Sugerir) ============= -->
+  <section class="tab-panel hidden" data-tab="combos">
+    <div class="chips-row" id="combos-subtab">
+      <button class="chip active" data-subtab="mis">📚 Mis combos</button>
+      <button class="chip"        data-subtab="sugerir">✨ Sugerir</button>
+    </div>
+
+    <!-- SUBTAB: MIS COMBOS -->
+    <div id="combos-mis">
+      <h2 class="section-title">Crear una combinación</h2>
+      <p class="hint">Elige <strong>1 hidrato + 1 proteína + 1 grasa</strong>. En comida y cena puedes añadir vegetal.</p>
+
+      <div class="form-row">
+        <label>Comida</label>
+        <div class="chips-row" id="combo-comida-chips"></div>
+      </div>
+
+      <div class="combo-builder">
+        <div class="combo-slot" data-grupo="hidrato">
+          <div class="slot-label">🌾 Hidrato</div>
+          <select data-slot="hidrato"></select>
+        </div>
+        <div class="combo-slot" data-grupo="proteina">
+          <div class="slot-label">🍗 Proteína</div>
+          <select data-slot="proteina"></select>
+        </div>
+        <div class="combo-slot" data-grupo="grasa">
+          <div class="slot-label">🥑 Grasa</div>
+          <select data-slot="grasa"></select>
+        </div>
+        <div class="combo-slot" data-grupo="vegetal" id="slot-vegetal-wrap">
+          <div class="slot-label">🥦 Vegetal <span class="opt">(opcional)</span></div>
+          <select data-slot="vegetal"></select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label>Nombre (opcional)</label>
+        <input type="text" id="combo-nombre" placeholder="Ej. Avena fitness desayuno">
+      </div>
+
+      <div class="form-row">
+        <label>Notas (opcional)</label>
+        <textarea id="combo-notas" rows="2" placeholder="Cómo lo preparas, variaciones…"></textarea>
+      </div>
+
+      <div class="actions">
+        <button id="btn-aleatorio-este" class="btn ghost">🎲 Aleatorio</button>
+        <button id="btn-guardar-combo" class="btn primary">Guardar combo</button>
+      </div>
+
+      <h2 class="section-title mt-xl">Combos guardados</h2>
+      <div class="chips-row" id="combos-comida-filter"></div>
+      <div id="combos-list" class="combos-list"></div>
+    </div>
+
+    <!-- SUBTAB: SUGERIR -->
+    <div id="combos-sugerir" class="hidden">
+      <h2 class="section-title">Sugerencias del día</h2>
+      <p class="hint">Combinaciones aleatorias variadas. Pulsa 🎲 para generar nuevas.</p>
+
+      <div class="form-row">
+        <label>Para qué comida</label>
+        <div class="chips-row" id="sug-comida-chips"></div>
+      </div>
+
+      <div class="actions">
+        <button id="btn-sugerir" class="btn primary block">🎲 Generar 5 combinaciones</button>
+      </div>
+
+      <div id="sugerencias-list" class="combos-list"></div>
+    </div>
+  </section>
+
+  <!-- ============= TAB: PLANIFICADOR ============= -->
+  <section class="tab-panel hidden" data-tab="semana">
+    <!-- LISTA DE PLANES -->
+    <div id="plans-list-view">
+      <h2 class="section-title">📆 Planificador</h2>
+      <p class="hint">Configura una secuencia de días (Día 1, Día 2, …) con tus combos. Luego puedes aplicar el plan a una fecha desde Registro y generar la lista de la compra.</p>
+      <div id="plans-list" class="combos-list"></div>
+      <div class="actions">
+        <button id="btn-new-plan" class="btn primary block">+ Crear nuevo plan</button>
+      </div>
+    </div>
+
+    <!-- EDITOR DE PLAN -->
+    <div id="plan-editor-view" class="hidden">
+      <div class="plan-editor-head">
+        <button id="btn-plan-back" class="icon-btn">‹</button>
+        <input type="text" id="plan-nombre" placeholder="Nombre del plan (ej. Definición fase 1)">
+      </div>
+
+      <div class="plan-days-control">
+        <span>Días:</span>
+        <button id="plan-day-minus" class="icon-btn">−</button>
+        <strong id="plan-day-count">7</strong>
+        <button id="plan-day-plus" class="icon-btn">+</button>
+        <span class="hint" style="margin:0 0 0 auto;">Hasta 30 días</span>
+      </div>
+
+      <details class="info-block" open>
+        <summary>📊 Frecuencias del plan</summary>
+        <div id="freq-counters" class="freq-counters"></div>
+      </details>
+
+      <div class="actions">
+        <button id="btn-suggest-all" class="btn ghost block">🎲 Sugerir todo el plan</button>
+      </div>
+
+      <div id="plan-days-grid" class="week-grid"></div>
+
+      <div class="form-row" style="margin-top:14px;">
+        <label>Notas del plan</label>
+        <textarea id="plan-notas" rows="2" placeholder="Compra, preparaciones, recordatorios…"></textarea>
+      </div>
+
+      <div class="actions">
+        <button id="btn-plan-delete" class="btn danger">🗑️ Eliminar</button>
+        <button id="btn-plan-save" class="btn primary">Guardar plan</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============= TAB: REGISTRO ============= -->
+  <section class="tab-panel hidden" data-tab="registro">
+    <div class="date-bar pretty">
+      <button id="btn-day-prev" class="icon-btn">‹</button>
+      <div class="date-display">
+        <div id="date-pretty" class="date-pretty"></div>
+        <input type="date" id="registro-fecha" class="date-picker">
+      </div>
+      <button id="btn-day-next" class="icon-btn">›</button>
+    </div>
+    <div class="date-actions">
+      <button id="btn-day-today" class="text-btn">📍 Hoy</button>
+      <button id="btn-pick-date" class="text-btn">📅 Elegir</button>
+      <button id="btn-clear-day" class="text-btn danger-text">🧹 Borrar día</button>
+    </div>
+
+    <div id="past-day-banner" class="past-day-banner hidden">📝 Estás editando un día pasado</div>
+
+    <div id="plan-active-banner" class="plan-active-banner hidden"></div>
+
+    <section class="water-card">
+      <div class="water-head">
+        <span>💧 Agua</span>
+        <span class="agua-total-wrap">
+          <button class="btn-minus-total" data-add-ml="-100" title="Quitar 100 ml">−</button>
+          <span id="agua-text">0 / 2,5 L</span>
+        </span>
+      </div>
+      <div class="water-bar"><div id="agua-fill" class="water-fill"></div></div>
+      <div class="water-buttons">
+        <button class="btn ghost" data-add-ml="100">+100 ml</button>
+        <button class="btn ghost" data-add-ml="250">+250 ml</button>
+        <button class="btn ghost" data-add-ml="400">+400 ml</button>
+        <button class="btn ghost" data-add-ml="500">+500 ml</button>
+      </div>
+    </section>
+
+    <section class="kcal-card" id="kcal-card">
+      <div class="water-head">
+        <span>🔥 Calorías del día</span>
+        <span id="kcal-total">0 kcal</span>
+      </div>
+      <div class="macros-row" id="macros-day">
+        <span class="macro p"><strong id="macro-p">0</strong>g <small>P</small></span>
+        <span class="macro c"><strong id="macro-c">0</strong>g <small>C</small></span>
+        <span class="macro f"><strong id="macro-f">0</strong>g <small>F</small></span>
+      </div>
+      <div class="hint" id="kcal-breakdown" style="margin:6px 0 0;"></div>
+    </section>
+
+    <div class="day-fruit-summary" id="day-fruit-summary"></div>
+
+    <h2 class="section-title">Comidas del día</h2>
+    <div id="meals-container"></div>
+
+    <h2 class="section-title">Notas del día</h2>
+    <textarea id="dia-notas" rows="3" placeholder="Cómo te sentiste, energía, sueño, ánimo…"></textarea>
+
+    <details class="info-block" id="weight-details">
+      <summary>⚖️ Peso semanal <span id="weight-summary-meta" class="weight-summary-meta"></span></summary>
+      <div id="weight-card"></div>
+    </details>
+
+    <details class="info-block" id="plan-apply-details">
+      <summary>📋 Asignar plan a partir de esta fecha</summary>
+      <div id="plan-apply-body"></div>
+    </details>
+
+    <div class="floating-save-spacer"></div>
+  </section>
+
+  <!-- ============= TAB: COMPRA ============= -->
+  <section class="tab-panel hidden" data-tab="compra">
+    <h2 class="section-title">🛒 Lista de la compra</h2>
+    <p class="hint">Calcula los alimentos que necesitas comprar para los días planificados. Lo que ya hayas registrado como consumido se resta del total.</p>
+
+    <div class="form-row">
+      <label>Rango de fechas</label>
+      <div class="plan-apply-row">
+        <input type="date" id="compra-start">
+        <span style="color:var(--text-soft);">→</span>
+        <input type="date" id="compra-end">
+      </div>
+    </div>
+
+    <div class="actions">
+      <button id="btn-compra-7" class="btn ghost">7 días</button>
+      <button id="btn-compra-14" class="btn ghost">14 días</button>
+      <button id="btn-compra-30" class="btn ghost">30 días</button>
+      <button id="btn-compra-gen" class="btn primary">Generar lista</button>
+    </div>
+
+    <div id="compra-summary" class="compra-summary hidden"></div>
+    <div id="compra-list"></div>
+
+    <div class="actions" id="compra-actions" style="display:none;">
+      <button id="btn-compra-uncheck" class="btn ghost">Limpiar marcas</button>
+    </div>
+  </section>
+
+  <!-- ============= TAB: HISTORIAL ============= -->
+  <section class="tab-panel hidden" data-tab="historial">
+    <h2 class="section-title">Resumen</h2>
+    <div id="stats-grid" class="stats-grid"></div>
+
+    <h2 class="section-title">Gráficas</h2>
+    <div class="chips-row" id="chart-buttons">
+      <button class="chip" data-chart="agua">💧 Agua</button>
+      <button class="chip" data-chart="peso">⚖️ Peso</button>
+      <button class="chip" data-chart="calorias">🔥 Calorías</button>
+      <button class="chip" data-chart="macros">🥗 Macros</button>
+      <button class="chip" data-chart="plan">✅ % Plan</button>
+    </div>
+    <div id="chart-wrap" class="chart-wrap hidden">
+      <div class="chart-head">
+        <span id="chart-title"></span>
+        <button class="icon-btn" id="chart-close" aria-label="Cerrar">✕</button>
+      </div>
+      <canvas id="chart-canvas"></canvas>
+      <div class="chips-row" id="chart-range-chips">
+        <button class="chip active" data-range="14">14 días</button>
+        <button class="chip"        data-range="30">30 días</button>
+        <button class="chip"        data-range="90">90 días</button>
+      </div>
+    </div>
+
+    <h2 class="section-title">Pesos registrados</h2>
+    <div id="weights-list" class="historial-list"></div>
+
+    <h2 class="section-title">Días registrados</h2>
+    <div id="historial-list" class="historial-list"></div>
+  </section>
+
+</main>
+
+<!-- Botón flotante Guardar (visible cuando estás en Registro) -->
+<button id="btn-guardar-dia" class="floating-save hidden">Guardar día</button>
+
+<!-- Tab bar inferior -->
+<nav class="tab-bar">
+  <button class="tab-btn active" data-go="registro">    <span>📅</span><span>Registro</span></button>
+  <button class="tab-btn"        data-go="semana">      <span>📆</span><span>Plan</span></button>
+  <button class="tab-btn"        data-go="compra">      <span>🛒</span><span>Compra</span></button>
+  <button class="tab-btn"        data-go="combos">      <span>🍽️</span><span>Combos</span></button>
+  <button class="tab-btn"        data-go="tabla">       <span>📋</span><span>Tabla</span></button>
+  <button class="tab-btn"        data-go="historial">   <span>📊</span><span>Historial</span></button>
+</nav>
+
+<!-- Menú modal -->
+<div id="menu-modal" class="modal hidden">
+  <div class="modal-content">
+    <h3>Opciones</h3>
+    <button class="btn block" id="btn-export">📥 Exportar base de datos (.sqlite)</button>
+    <label class="btn block ghost">
+      📤 Importar base de datos
+      <input type="file" id="file-import" accept=".sqlite,.db,application/x-sqlite3" hidden>
+    </label>
+    <button class="btn block danger" id="btn-reset">🗑️ Borrar TODO</button>
+    <button class="btn block" id="btn-close-menu">Cerrar</button>
+    <p class="hint center">
+      Plan basado en PDF de 19.05.26 ·
+      Entrenador: César Fitness · Nutricionista: Mario Ocaña
+    </p>
+  </div>
+</div>
+
+<!-- Visor de fotos -->
+<div id="photo-modal" class="photo-modal hidden">
+  <img id="photo-modal-img" src="" alt="Foto">
+  <button id="photo-modal-close" class="photo-modal-close" aria-label="Cerrar">✕</button>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="toast hidden"></div>
+
+<!-- Loading -->
+<div id="loading" class="loading">
+  <div class="loader"></div>
+  <p>Cargando base de datos…</p>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sql.js@1.10.3/dist/sql-wasm.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="data.js"></script>
+<script src="db.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>
