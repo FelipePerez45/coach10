@@ -368,7 +368,34 @@ const CLOUD = (() => {
     isAdmin,
     adminEmail: () => ADMIN_EMAIL,
     explainError: explainAuthError,
+    diagnose,
   };
+
+  async function diagnose() {
+    const r = {
+      firebase_initialized:  !!app,
+      auth_initialized:      !!auth,
+      firestore_initialized: !!fs,
+      signed_in:             !!user,
+      email:                 user ? user.email : null,
+      is_admin:              isAdmin(),
+      workspace_id:          workspaceId,
+      status:                status,
+    };
+    if (fs) {
+      try {
+        const t0 = Date.now();
+        await fs.collection('_diag').limit(1).get();
+        r.firestore_ok = true;
+        r.firestore_latency_ms = Date.now() - t0;
+      } catch (e) {
+        r.firestore_ok = false;
+        r.firestore_error_code = e.code || '(sin código)';
+        r.firestore_error_msg  = e.message || String(e);
+      }
+    }
+    return r;
+  }
 })();
 
 window.CLOUD = CLOUD;
