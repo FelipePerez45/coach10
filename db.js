@@ -175,10 +175,30 @@ const DB = (() => {
     ensureColumn('meal_logs', 'alternativa_foods_json','TEXT');
   }
 
+  // Cuando suprimimos cambios (durante una pull remota) no queremos disparar
+  // un push de vuelta a la nube.
+  let _suppressCloudDirty = false;
+
   async function persist() {
     if (!_db) return;
     const data = _db.export();
     await idbSaveBlob(data);
+    if (!_suppressCloudDirty && window.CLOUD) {
+      try { window.CLOUD.markDirty(); } catch (e) { /* ignore */ }
+    }
+  }
+
+  function exportBlob() {
+    return _db.export();
+  }
+
+  async function replaceFromBlob(uint8) {
+    if (_db) _db.close();
+    _db = new _SQL.Database(uint8);
+    _db.exec(SCHEMA);
+    runMigrations();
+    _suppressCloudDirty = true;
+    try { await persist(); } finally { _suppressCloudDirty = false; }
   }
 
   function run(sql, params = []) {
@@ -651,6 +671,7 @@ const DB = (() => {
     dailyKcal,
     stats,
     exportToFile, importFromFile, reset,
+    exportBlob, replaceFromBlob,
   };
 })();
 

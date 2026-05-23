@@ -2181,6 +2181,111 @@ function closePhoto() {
 
 // ============= INIT ==============================================
 
+// Expuesta para que cloud.js pueda refrescar la vista tras pull remoto
+window.refreshCurrentView = () => {
+  if (STATE.tab === 'tabla')        renderTabla();
+  else if (STATE.tab === 'combos')  renderCombos();
+  else if (STATE.tab === 'registro') renderRegistro();
+  else if (STATE.tab === 'historial') renderHistorial();
+  else if (STATE.tab === 'semana')  renderSemana();
+  else if (STATE.tab === 'compra')  renderCompra();
+};
+
+function setupCloudUI() {
+  const dot   = $('#cloud-dot');
+  const label = $('#cloud-label');
+  const btn   = $('#btn-cloud');
+  if (!btn) return;
+
+  const labels = {
+    'idle':       'Conectando…',
+    'signed-out': 'Local',
+    'syncing':    'Sincronizando…',
+    'synced':     'Sincronizado',
+    'pending':    'Cambios pendientes',
+    'offline':    'Sin conexión',
+    'error':      'Error',
+  };
+
+  CLOUD.onStatus((s, detail) => {
+    btn.className = 'cloud-btn ' + s;
+    label.textContent = labels[s] || s;
+    if (s === 'error' && detail) btn.title = detail;
+  });
+
+  CLOUD.onWorkspace(ws => {
+    const sub = $('#brand-sub');
+    if (!sub) return;
+    if (ws) sub.textContent = 'Nutrición · ' + (ws.name || 'workspace');
+    else sub.textContent = 'Nutrición · Local';
+    renderCloudMenuSection();
+  });
+
+  btn.onclick = async () => {
+    if (!CLOUD.isAuthenticated()) {
+      try { await CLOUD.signIn(); }
+      catch (e) { toast(CLOUD.explainError(e), 'error'); }
+    } else {
+      try { await CLOUD.syncNow(); toast('Sincronizado'); }
+      catch (e) { toast(CLOUD.explainError(e), 'error'); }
+    }
+  };
+}
+
+function renderCloudMenuSection() {
+  const cont = $('#menu-cloud-section');
+  if (!cont) return;
+  const u = CLOUD.currentUser();
+  if (!u) {
+    cont.innerHTML = `
+      <button class="btn block primary" id="btn-menu-signin">🔐 Iniciar sesión con Google</button>
+      <p class="hint center" style="margin:6px 0 14px;">Sincroniza tus datos entre dispositivos y compártelos con otras personas.</p>
+    `;
+    $('#btn-menu-signin').onclick = async () => {
+      try { await CLOUD.signIn(); closeMenu(); }
+      catch (e) { toast(CLOUD.explainError(e), 'error'); }
+    };
+  } else {
+    cont.innerHTML = `
+      <div class="hint" style="margin-bottom:10px;">Sesión iniciada como <strong>${u.email}</strong></div>
+      <button class="btn block" id="btn-menu-share">👥 Compartir workspace</button>
+      <button class="btn block" id="btn-menu-sync">🔄 Sincronizar ahora</button>
+      <button class="btn block ghost" id="btn-menu-signout">Cerrar sesión</button>
+    `;
+    $('#btn-menu-share').onclick = () => { closeMenu(); openShare(); };
+    $('#btn-menu-sync').onclick  = async () => {
+      try { await CLOUD.syncNow(); toast('Sincronizado ✓'); }
+      catch (e) { toast('Error al sincronizar', 'error'); }
+    };
+    $('#btn-menu-signout').onclick = async () => {
+      if (!confirm('¿Cerrar sesión? Tus datos se quedan en este dispositivo (puedes seguir usando la app sin sincronizar).')) return;
+      await CLOUD.signOut();
+      closeMenu();
+    };
+  }
+}
+
+function openShare()  { renderShareMembers(); $('#share-modal').classList.remove('hidden'); }
+function closeShare() { $('#share-modal').classList.add('hidden'); $('#share-email').value = ''; }
+
+function renderShareMembers() {
+  const ws = CLOUD.currentWorkspace();
+  const cont = $('#share-members');
+  if (!ws) { cont.innerHTML = '<p class="hint">Sin workspace activo.</p>'; return; }
+  const emails = ws.member_emails || [];
+  cont.innerHTML = emails.map(e => `
+    <div class="share-member">
+      <span>${e}${e === ws.owner_email ? '<span class="role">propietario</span>' : ''}</span>
+      ${e !== ws.owner_email ? `<button data-rm-email="${e}" aria-label="Quitar">✕</button>` : ''}
+    </div>
+  `).join('') || '<p class="hint">Sólo tú.</p>';
+  cont.querySelectorAll('[data-rm-email]').forEach(b => b.onclick = async () => {
+    if (!confirm(`¿Quitar a ${b.dataset.rmEmail} del workspace?`)) return;
+    try { await CLOUD.uninvite(b.dataset.rmEmail); toast('Eliminado'); renderShareMembers(); }
+    catch (e) { toast(e.message || 'Error', 'error'); }
+  });
+}
+
 async function main() {
   try {
     await DB.init();
@@ -2189,7 +2294,15 @@ async function main() {
     $('#loading p').textContent = 'Error cargando la base de datos. Comprueba la conexión a internet.';
     return;
   }
+
+  // Cloud: init y espera al primer estado de auth (no bloquea más de 1-2s)
+  try {
+    await CLOUD.init();
+    await CLOUD.ready();
+  } catch (e) { console.error('Cloud init error', e); }
+
   $('#loading').classList.add('hidden');
+  setupCloudUI();
 
   $$('.tab-btn').forEach(b => b.onclick = () => goTab(b.dataset.go));
 
@@ -2301,6 +2414,22 @@ async function main() {
   // Visor de fotos
   $('#photo-modal-close').onclick = closePhoto;
   $('#photo-modal').onclick = e => { if (e.target.id === 'photo-modal') closePhoto(); };
+
+  // Compartir workspace
+  $('#btn-share-close').onclick = closeShare;
+  $('#share-modal').onclick = e => { if (e.target.id === 'share-modal') closeShare(); };
+  $('#btn-share-add').onclick = async () => {
+    const email = $('#share-email').value.trim();
+    if (!email) { toast('Escribe un email', 'error'); return; }
+    try {
+      await CLOUD.invite(email);
+      toast('Añadido ✓');
+      $('#share-email').value = '';
+      renderShareMembers();
+    } catch (e) {
+      toast(e.message || 'Error', 'error');
+    }
+  };
 
   // Menú
   $('#btn-menu').onclick = openMenu;

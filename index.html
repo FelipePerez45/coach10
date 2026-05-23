@@ -14,7 +14,13 @@
 <header class="app-header">
   <div class="brand">
     <span class="brand-mark">EL CUERPO<span class="brand-10">10</span></span>
-    <span class="brand-sub">Nutrición · Felipe Alejandro</span>
+    <span class="brand-sub" id="brand-sub">Nutrición</span>
+  </div>
+  <div class="cloud-status">
+    <button id="btn-cloud" class="cloud-btn" aria-label="Estado de la nube">
+      <span class="cloud-dot" id="cloud-dot"></span>
+      <span class="cloud-label" id="cloud-label">Local</span>
+    </button>
   </div>
   <button id="btn-menu" class="icon-btn" aria-label="Más opciones">⋯</button>
 </header>
@@ -350,6 +356,7 @@
 <div id="menu-modal" class="modal hidden">
   <div class="modal-content">
     <h3>Opciones</h3>
+    <div id="menu-cloud-section"></div>
     <button class="btn block" id="btn-export">📥 Exportar base de datos (.sqlite)</button>
     <label class="btn block ghost">
       📤 Importar base de datos
@@ -361,6 +368,21 @@
       Plan basado en PDF de 19.05.26 ·
       Entrenador: César Fitness · Nutricionista: Mario Ocaña
     </p>
+  </div>
+</div>
+
+<!-- Modal Compartir workspace -->
+<div id="share-modal" class="modal hidden">
+  <div class="modal-content">
+    <h3>👥 Compartir workspace</h3>
+    <p class="hint">Las personas que añadas podrán entrar con su cuenta de Google y ver/editar tus mismos datos en tiempo real.</p>
+    <div id="share-members"></div>
+    <div class="form-row">
+      <label>Añadir colaborador (email de Google)</label>
+      <input type="email" id="share-email" placeholder="alguien@gmail.com" autocomplete="off">
+    </div>
+    <button class="btn block primary" id="btn-share-add">Añadir colaborador</button>
+    <button class="btn block" id="btn-share-close">Cerrar</button>
   </div>
 </div>
 
@@ -379,10 +401,14 @@
   <p>Cargando base de datos…</p>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sql.js@1.10.3/dist/sql-wasm.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script src="data.js"></script>
 <script src="db.js"></script>
+<script src="cloud.js"></script>
 <script src="app.js"></script>
 
 </body>
