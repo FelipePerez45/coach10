@@ -2271,11 +2271,28 @@ function renderCloudMenuSection() {
   if (!u) {
     cont.innerHTML = `
       <button class="btn block primary" id="btn-menu-signin">🔐 Iniciar sesión con Google</button>
+      <button class="btn block ghost" id="btn-menu-diag-off">🔍 Diagnóstico cloud</button>
       <p class="hint center" style="margin:6px 0 14px;">Sincroniza tus datos entre dispositivos y compártelos con otras personas.</p>
     `;
     $('#btn-menu-signin').onclick = async () => {
       try { await CLOUD.signIn(); closeMenu(); }
       catch (e) { toast(CLOUD.explainError(e), 'error'); }
+    };
+    $('#btn-menu-diag-off').onclick = async () => {
+      const r = await CLOUD.diagnose();
+      const lines = [
+        `Firebase init: ${r.firebase_initialized ? '✅' : '❌'}`,
+        `Auth init: ${r.auth_initialized ? '✅' : '❌'}`,
+        `Firestore init: ${r.firestore_initialized ? '✅' : '❌'}`,
+        `Sesión: ${r.signed_in ? '✅ ' + r.email : '❌ no logueado'}`,
+        `Estado: ${r.status}`,
+        '',
+        `Conexión Firestore: ${
+          'firestore_ok' in r
+            ? (r.firestore_ok ? `✅ OK (${r.firestore_latency_ms} ms)` : `❌ ${r.firestore_error_code}\n  ${r.firestore_error_msg}`)
+            : '— (no probado)'}`
+      ];
+      alert(lines.join('\n'));
     };
   } else {
     const adminBadge = CLOUD.isAdmin() ? ' · 👑 administrador' : '';
@@ -2285,6 +2302,7 @@ function renderCloudMenuSection() {
       </div>
       ${CLOUD.isAdmin() ? '<button class="btn block" id="btn-menu-share">👥 Gestionar accesos</button>' : ''}
       <button class="btn block" id="btn-menu-sync">🔄 Sincronizar ahora</button>
+      <button class="btn block ghost" id="btn-menu-diag">🔍 Diagnóstico cloud</button>
       <button class="btn block ghost" id="btn-menu-signout">Cerrar sesión</button>
     `;
     if (CLOUD.isAdmin()) {
@@ -2293,6 +2311,25 @@ function renderCloudMenuSection() {
     $('#btn-menu-sync').onclick  = async () => {
       try { await CLOUD.syncNow(); toast('Sincronizado ✓'); }
       catch (e) { toast('Error al sincronizar', 'error'); }
+    };
+    const dBtn = $('#btn-menu-diag');
+    if (dBtn) dBtn.onclick = async () => {
+      const r = await CLOUD.diagnose();
+      const lines = [
+        `Firebase init: ${r.firebase_initialized ? '✅' : '❌'}`,
+        `Auth init: ${r.auth_initialized ? '✅' : '❌'}`,
+        `Firestore init: ${r.firestore_initialized ? '✅' : '❌'}`,
+        `Sesión: ${r.signed_in ? '✅ ' + r.email : '❌'}`,
+        `Admin: ${r.is_admin ? '✅' : '—'}`,
+        `Workspace: ${r.workspace_id || '— (sin acceso)'}`,
+        `Estado: ${r.status}`,
+        '',
+        `Conexión Firestore: ${
+          'firestore_ok' in r
+            ? (r.firestore_ok ? `✅ OK (${r.firestore_latency_ms} ms)` : `❌ ${r.firestore_error_code}\n  ${r.firestore_error_msg}`)
+            : '— (no probado)'}`
+      ];
+      alert(lines.join('\n'));
     };
     $('#btn-menu-signout').onclick = async () => {
       if (!confirm('¿Cerrar sesión? Tus datos se quedan en este dispositivo (puedes seguir usando la app sin sincronizar).')) return;
